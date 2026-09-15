@@ -58,3 +58,25 @@ def chunk_text(
         chunk_number += 1
 
     return chunks
+
+
+def chunk_document(
+    document: ParsedDocument,
+    chunk_size: int = 1000,
+    overlap: int = 200,
+) -> list[TextChunk]:
+    """Create overlapping text chunks from every page."""
+
+    chunks = []
+
+    for page in document.pages:
+        page_chunks = chunk_text(
+            text=page.text,
+            page_number=page.page_number,
+            chunk_size=chunk_size,
+            overlap=overlap,
+        )
+
+        chunks.extend(page_chunks)
+
+    return chunks
