@@ -19,3 +19,22 @@ class TextEmbedder:
         embedding = self.model.encode(text)
 
         return embedding.tolist()
+
+    def embed_texts(self, texts: list[str]) -> list[list[float]]:
+        """Generate embeddings for multiple texts."""
+
+        if not isinstance(texts, list):
+            raise TypeError("texts must be a list")
+
+        if not texts:
+            return []
+
+        if not all(isinstance(text, str) for text in texts):
+            raise TypeError("every item in texts must be a string")
+
+        if any(not text.strip() for text in texts):
+            raise ValueError("texts cannot contain empty strings")
+
+        embeddings = self.model.encode(texts)
+
+        return embeddings.tolist()
