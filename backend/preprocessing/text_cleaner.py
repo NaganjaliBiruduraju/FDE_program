@@ -30,6 +30,19 @@ def clean_text(text: str) -> str:
     text = re.sub(r"\n{3,}", "\n\n", text)
 
     return text.strip()
+def normalize_text_blocks(text: str) -> str:
+    """Normalize paragraph spacing without altering meaningful content."""
+
+    if not isinstance(text, str):
+        raise TypeError("text must be a string")
+
+    # Normalize excessive blank lines
+    text = re.sub(r"\n{3,}", "\n\n", text)
+
+    # Remove spaces immediately before a newline
+    text = re.sub(r" +\n", "\n", text)
+
+    return text.strip()
 from backend.parser.pdf_parser import ParsedDocument
 
 
