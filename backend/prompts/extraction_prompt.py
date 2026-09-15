@@ -53,5 +53,9 @@ DOCUMENT CONTENT:
 -----------------
 
 Extract the relevant information from the document content above.
+
+Return the result as valid JSON.
 Use only information explicitly present in the document.
+The JSON must contain the following top-level objects:
+"metadata" and "content".
 """

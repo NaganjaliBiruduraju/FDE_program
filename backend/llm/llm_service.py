@@ -23,7 +23,7 @@ class GroqLLM:
         self.model = model
 
     def generate(self, prompt: str) -> str:
-        """Generate a response from the Groq LLM."""
+        """Generate a text response from the Groq LLM."""
 
         if not isinstance(prompt, str):
             raise TypeError("prompt must be a string")
@@ -39,6 +39,28 @@ class GroqLLM:
                     "content": prompt,
                 }
             ],
+        )
+
+        return response.choices[0].message.content
+
+    def generate_json(self, prompt: str) -> str:
+        """Generate a JSON response from the Groq LLM."""
+
+        if not isinstance(prompt, str):
+            raise TypeError("prompt must be a string")
+
+        if not prompt.strip():
+            raise ValueError("prompt cannot be empty")
+
+        response = self.client.chat.completions.create(
+            model=self.model,
+            messages=[
+                {
+                    "role": "user",
+                    "content": prompt,
+                }
+            ],
+            response_format={"type": "json_object"},
         )
 
         return response.choices[0].message.content
