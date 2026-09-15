@@ -28,7 +28,10 @@ def parse_pdf(pdf_path: str | Path) -> ParsedDocument:
     if pdf_path.suffix.lower() != ".pdf":
         raise ValueError(f"Expected a PDF file: {pdf_path}")
 
-    document = pymupdf.open(pdf_path)
+    try:
+        document = pymupdf.open(pdf_path)
+    except Exception as exc:
+        raise ValueError(f"Unable to open PDF: {pdf_path}") from exc
 
     try:
         pages = []

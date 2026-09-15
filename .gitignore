@@ -37,3 +37,6 @@ Thumbs.db
 *.temp
 # Local document datasets
 data/
+# Local vector database
+documents/vector_db/
+documents/test_vector_db/
