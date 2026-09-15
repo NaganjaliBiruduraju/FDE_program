@@ -24,6 +24,29 @@ class DocumentMetadata(BaseModel):
                 for key, item in value.items()
             ]
 
+        if isinstance(value, list):
+            normalized = []
+
+            for item in value:
+                if isinstance(item, str):
+                    normalized.append(item)
+
+                elif isinstance(item, dict):
+                    if "name" in item:
+                        normalized.append(item["name"])
+                    else:
+                        normalized.append(
+                            "; ".join(
+                                f"{key}: {item_value}"
+                                for key, item_value in item.items()
+                            )
+                        )
+
+                else:
+                    normalized.append(str(item))
+
+            return normalized
+
         return value
 
 
@@ -68,6 +91,26 @@ class DocumentContent(BaseModel):
                 f"{key}: {item}"
                 for key, item in value.items()
             ]
+
+        if isinstance(value, list):
+            normalized = []
+
+            for item in value:
+                if isinstance(item, str):
+                    normalized.append(item)
+
+                elif isinstance(item, dict):
+                    normalized.append(
+                        "; ".join(
+                            f"{key}: {item_value}"
+                            for key, item_value in item.items()
+                        )
+                    )
+
+                else:
+                    normalized.append(str(item))
+
+            return normalized
 
         return value
 
