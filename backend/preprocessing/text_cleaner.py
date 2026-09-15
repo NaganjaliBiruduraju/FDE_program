@@ -30,3 +30,24 @@ def clean_text(text: str) -> str:
     text = re.sub(r"\n{3,}", "\n\n", text)
 
     return text.strip()
+from backend.parser.pdf_parser import ParsedDocument
+
+
+def preprocess_document(document: ParsedDocument) -> ParsedDocument:
+    """Clean the text of every page in a parsed document."""
+
+    cleaned_pages = []
+
+    for page in document.pages:
+        cleaned_pages.append(
+            type(page)(
+                page_number=page.page_number,
+                text=clean_text(page.text),
+            )
+        )
+
+    return ParsedDocument(
+        file_name=document.file_name,
+        page_count=document.page_count,
+        pages=cleaned_pages,
+    )
