@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from backend.parser.pdf_parser import ParsedDocument
 
 
 @dataclass
@@ -38,5 +39,26 @@ def chunk_text(
                 page_number=page_number,
             )
         )
+
+    return chunks
+
+
+
+def chunk_document(
+    document: ParsedDocument,
+    chunk_size: int = 1000,
+) -> list[TextChunk]:
+    """Create text chunks from every page in a parsed document."""
+
+    chunks = []
+
+    for page in document.pages:
+        page_chunks = chunk_text(
+            text=page.text,
+            page_number=page.page_number,
+            chunk_size=chunk_size,
+        )
+
+        chunks.extend(page_chunks)
 
     return chunks
