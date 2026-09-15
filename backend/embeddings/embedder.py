@@ -1,3 +1,4 @@
+import numpy as np
 from sentence_transformers import SentenceTransformer
 
 
@@ -38,3 +39,26 @@ class TextEmbedder:
         embeddings = self.model.encode(texts)
 
         return embeddings.tolist()
+
+
+def cosine_similarity(
+    vector_a: list[float],
+    vector_b: list[float],
+) -> float:
+    """Calculate cosine similarity between two vectors."""
+
+    if not vector_a or not vector_b:
+        raise ValueError("vectors cannot be empty")
+
+    if len(vector_a) != len(vector_b):
+        raise ValueError("vectors must have the same dimensions")
+
+    a = np.array(vector_a)
+    b = np.array(vector_b)
+
+    denominator = np.linalg.norm(a) * np.linalg.norm(b)
+
+    if denominator == 0:
+        raise ValueError("vectors cannot have zero magnitude")
+
+    return float(np.dot(a, b) / denominator)
