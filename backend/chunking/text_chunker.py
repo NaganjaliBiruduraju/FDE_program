@@ -8,11 +8,13 @@ class TextChunk:
     chunk_id: str
     text: str
     page_number: int
+    file_name: str
 
 
 def chunk_text(
     text: str,
     page_number: int,
+    file_name: str,
     chunk_size: int = 1000,
     overlap: int = 200,
 ) -> list[TextChunk]:
@@ -45,9 +47,10 @@ def chunk_text(
 
         chunks.append(
             TextChunk(
-                chunk_id=f"page_{page_number}_chunk_{chunk_number}",
+                chunk_id=f"{file_name}_page_{page_number}_chunk_{chunk_number}",
                 text=text[start:end],
                 page_number=page_number,
+                file_name=file_name,
             )
         )
 
@@ -73,6 +76,7 @@ def chunk_document(
         page_chunks = chunk_text(
             text=page.text,
             page_number=page.page_number,
+            file_name=document.file_name,
             chunk_size=chunk_size,
             overlap=overlap,
         )
