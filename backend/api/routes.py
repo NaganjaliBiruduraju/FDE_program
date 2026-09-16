@@ -48,7 +48,7 @@ async def extract_document(
                 "methodology, algorithms, results, "
                 "findings, and conclusions?"
             ),
-            top_k=5,
+            top_k=15,
         )
 
         return {
