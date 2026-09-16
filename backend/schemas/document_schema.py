@@ -114,6 +114,27 @@ class DocumentContent(BaseModel):
 
         return value
 
+    @field_validator(
+        "experimental_setup",
+        "conclusions",
+        mode="before",
+    )
+    @classmethod
+    def normalize_string_fields(cls, value):
+        if value is None:
+            return None
+
+        if isinstance(value, str):
+            return value
+
+        if isinstance(value, dict):
+            return "; ".join(
+                f"{key}: {item}"
+                for key, item in value.items()
+            )
+
+        return str(value)
+
     @field_validator("dataset_information", mode="before")
     @classmethod
     def normalize_dataset_information(cls, value):
