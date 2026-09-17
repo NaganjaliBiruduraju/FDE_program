@@ -69,13 +69,13 @@ class DocumentPipeline:
                 "top_k must be greater than 0"
             )
 
-        # 1. Parse PDF
+        # 1. Parse the PDF
         document = parse_pdf(pdf_path)
 
-        # 2. Preprocess text
+        # 2. Preprocess extracted text
         document = preprocess_document(document)
 
-        # 3. Create chunks
+        # 3. Create document chunks
         chunks = chunk_document(document)
 
         if not chunks:
@@ -94,7 +94,7 @@ class DocumentPipeline:
             embeddings=embeddings,
         )
 
-        # 6. Retrieve chunks relevant to the user's prompt
+        # 6. Retrieve relevant chunks using RAG
         results = self.retriever.retrieve(
             query=user_prompt,
             file_name=document.file_name,
@@ -106,26 +106,44 @@ class DocumentPipeline:
                 "No relevant information was found in the document"
             )
 
-        # 7. Build context
+        # 7. Build context for the LLM
         context = "\n\n".join(
             result["text"]
             for result in results
         )
 
-        # 8. Generate response according to the user's prompt
+        # 8. Generate the prompt-driven response
         response = self.extractor.extract(
             user_prompt=user_prompt,
             context=context,
         )
 
-        # 9. Add source references from retrieved chunks
-        response.sources = [
-            {
-                "file_name": result["metadata"]["file_name"],
-                "page_number": result["metadata"]["page_number"],
-            }
-            for result in results
-        ]
+        # 9. Create unique source references
+        unique_sources = []
+        seen_sources = set()
+
+        for result in results:
+            file_name = result["metadata"]["file_name"]
+            page_number = result["metadata"]["page_number"]
+
+            source_key = (
+                file_name,
+                page_number,
+            )
+
+            if source_key in seen_sources:
+                continue
+
+            seen_sources.add(source_key)
+
+            unique_sources.append(
+                {
+                    "file_name": file_name,
+                    "page_number": page_number,
+                }
+            )
+
+        response.sources = unique_sources
 
         return {
             "document": response,
