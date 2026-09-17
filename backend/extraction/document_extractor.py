@@ -33,6 +33,27 @@ class DocumentExtractor:
 
         prompt_requirements = analyze_prompt(user_prompt)
 
+        # Stop before LLM generation when the prompt is too weak.
+        prompt_quality = prompt_requirements.get(
+            "prompt_quality",
+            {},
+        )
+
+        if prompt_quality.get("status") == "weak":
+            return DocumentResponse(
+                answer=(
+                    "Please provide a more specific request. "
+                    "For example, ask me to explain, summarize, "
+                    "extract, compare, or list information about "
+                    "a specific topic from the document."
+                ),
+                extracted_information={},
+                missing_information=[
+                    "A specific task or question",
+                ],
+                sources=[],
+            )
+
         prompt = build_extraction_prompt(
             user_prompt=user_prompt,
             context=context,

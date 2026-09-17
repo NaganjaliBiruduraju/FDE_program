@@ -137,16 +137,37 @@ def _detect_request_type(
 
     return "general"
 
-
 def _assess_prompt_quality(
     prompt: str,
     request_type: str,
 ) -> dict:
     """Assess whether the prompt provides enough information."""
 
+    lower_prompt = prompt.lower().strip()
+
+    # Explicit question forms are sufficiently specific.
+    question_patterns = [
+        r"^what\s+(is|are)\b",
+        r"^how\s+(does|do|is|are)\b",
+        r"^why\s+(is|are|does|do)\b",
+        r"^which\b",
+        r"^where\b",
+        r"^when\b",
+        r"^who\b",
+    ]
+
+    if any(
+        re.search(pattern, lower_prompt)
+        for pattern in question_patterns
+    ):
+        return {
+            "status": "sufficient",
+            "reason": None,
+        }
+
     words = re.findall(
         r"\b[a-zA-Z0-9]+\b",
-        prompt.lower(),
+        lower_prompt,
     )
 
     meaningful_words = [
@@ -160,17 +181,7 @@ def _assess_prompt_quality(
             "are",
             "was",
             "were",
-            "what",
-            "why",
-            "how",
-            "does",
-            "do",
-            "can",
-            "could",
-            "would",
-            "should",
             "please",
-            "tell",
             "me",
             "about",
             "this",
