@@ -26,11 +26,14 @@ function displayLabel(value) {
 
 function renderValue(value) {
   if (Array.isArray(value)) {
+    if (!value.length) return <span className="empty-value">Not provided</span>;
     return <ul className="value-list">{value.map((item, index) => <li key={`${index}-${String(item)}`}>{renderValue(item)}</li>)}</ul>;
   }
   if (value && typeof value === "object") {
+    if (!Object.keys(value).length) return <span className="empty-value">Not provided</span>;
     return <dl className="detail-list">{Object.entries(value).map(([key, item]) => <div className="detail-row" key={key}><dt>{displayLabel(key)}</dt><dd>{renderValue(item)}</dd></div>)}</dl>;
   }
+  if (value === null || value === undefined || (typeof value === "string" && !value.trim())) return <span className="empty-value">Not provided</span>;
   return <span>{String(value ?? "Not specified")}</span>;
 }
 
@@ -101,7 +104,11 @@ function MissingInformation({ items }) {
 }
 
 function Sources({ sources }) {
-  return <aside className="sources-card panel"><div className="card-label"><span className="answer-symbol">#</span><span>Sources</span></div><p className="source-intro">This answer was informed by these document pages.</p>{Array.isArray(sources) && sources.length ? <div className="source-list">{sources.map((source, index) => <div className="source-item" key={`${source.file_name}-${source.page_number}-${index}`}><span className="page-number">{source.page_number}</span><div><strong>{source.file_name}</strong><span>Page {source.page_number}</span></div></div>)}</div> : <p className="muted-copy">No page references were returned.</p>}</aside>;
+  const [selectedSource, setSelectedSource] = useState(null);
+  const sourceList = Array.isArray(sources) ? sources : [];
+  const activeSource = selectedSource === null ? null : sourceList[selectedSource];
+
+  return <aside className="sources-card panel"><div className="sources-heading"><div className="card-label"><span className="answer-symbol">#</span><span>Sources</span></div><span className="source-count">{sourceList.length} {sourceList.length === 1 ? "reference" : "references"}</span></div><p className="source-intro">Select a page reference to keep it in focus. Page navigation is not available in this workspace.</p>{sourceList.length ? <div className="source-list">{sourceList.map((source, index) => <button className={`source-item ${selectedSource === index ? "is-selected" : ""}`} type="button" key={`${source.file_name}-${source.page_number}-${index}`} onClick={() => setSelectedSource(index)} aria-pressed={selectedSource === index}><span className="page-number">{source.page_number}</span><span className="source-details"><strong>{source.file_name}</strong><span>Page {source.page_number}</span></span><span className="source-select-indicator" aria-hidden="true">{selectedSource === index ? "Selected" : "View"}</span></button>)}</div> : <p className="muted-copy">No page references were returned.</p>}{activeSource && <div className="selected-source" role="status"><strong>Selected source</strong><span>{activeSource.file_name} · Page {activeSource.page_number}</span></div>}</aside>;
 }
 
 function App() {
