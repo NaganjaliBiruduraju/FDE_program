@@ -78,8 +78,9 @@ function App() {
     formData.append("prompt", prompt.trim());
     try {
       const response = await fetch(API_URL, { method: "POST", body: formData });
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.detail || "Document extraction failed.");
+      const data = await response.json().catch(() => null);
+      if (!response.ok) throw new Error(data?.detail || "Document extraction failed.");
+      if (!data?.document) throw new Error("The document service returned an incomplete response.");
       setResult(data);
     } catch (err) {
       setError(err.message || "We could not process that document. Please try again.");
