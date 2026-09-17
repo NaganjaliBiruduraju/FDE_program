@@ -34,13 +34,74 @@ function renderValue(value) {
   return <span>{String(value ?? "Not specified")}</span>;
 }
 
-function AnswerContent({ answer, mode }) {
-  if (!answer) return <p className="muted-copy">No answer was returned for this question.</p>;
-  const lines = answer.split(/\n+/).map((line) => line.replace(/^\s*(?:[-*•]|\d+[.)])\s*/, "").trim()).filter(Boolean);
-  if (mode === "points" && lines.length > 1) {
-    return <ol className="answer-points">{lines.map((line, index) => <li key={`${index}-${line}`}>{line}</li>)}</ol>;
+function splitTableRow(line) {
+  return line.trim().replace(/^\|/, "").replace(/\|$/, "").split("|").map((cell) => cell.trim());
+}
+
+function isTableSeparator(line) {
+  return splitTableRow(line).every((cell) => /^:?-{3,}:?$/.test(cell));
+}
+
+function parseMarkdownTable(answer) {
+  const lines = answer.split(/\r?\n/);
+  for (let index = 0; index < lines.length - 1; index += 1) {
+    if (!lines[index].includes("|") || !isTableSeparator(lines[index + 1])) continue;
+    const headers = splitTableRow(lines[index]);
+    const rows = [];
+    let end = index + 2;
+    while (end < lines.length && lines[end].trim() && lines[end].includes("|")) {
+      rows.push(splitTableRow(lines[end]));
+      end += 1;
+    }
+    return {
+      before: lines.slice(0, index).join("\n").trim(),
+      headers,
+      rows,
+      after: lines.slice(end).join("\n").trim(),
+    };
   }
-  return <div className="answer-copy">{answer.split(/\n+/).map((paragraph, index) => <p key={`${index}-${paragraph}`}>{paragraph}</p>)}</div>;
+  return null;
+}
+
+function getNumberedItems(answer) {
+  return answer.split(/\r?\n/).map((line) => {
+    const match = line.match(/^\s*\d+[.)]\s+(.+)$/);
+    return match ? match[1].trim() : null;
+  }).filter(Boolean);
+}
+
+function renderParagraphs(text, className = "answer-copy") {
+  if (!text) return null;
+  return <div className={className}>{text.split(/\n+/).map((paragraph, index) => <p key={`${index}-${paragraph}`}>{paragraph}</p>)}</div>;
+}
+
+function MarkdownTable({ table }) {
+  return <div className="answer-table-wrap"><table className="answer-table"><thead><tr>{table.headers.map((header, index) => <th key={`${header}-${index}`}>{header}</th>)}</tr></thead><tbody>{table.rows.map((row, rowIndex) => <tr key={`row-${rowIndex}`}>{table.headers.map((_, cellIndex) => <td key={`cell-${rowIndex}-${cellIndex}`}>{row[cellIndex] || ""}</td>)}</tr>)}</tbody></table></div>;
+}
+
+function AnswerContent({ answer }) {
+  if (!answer) return <p className="muted-copy">No answer was returned for this question.</p>;
+  const table = parseMarkdownTable(answer);
+  if (table) return <div className="answer-content">{renderParagraphs(table.before)}<MarkdownTable table={table} />{renderParagraphs(table.after)}</div>;
+  const numberedItems = getNumberedItems(answer);
+  if (numberedItems.length > 1) return <ol className="answer-points">{numberedItems.map((item, index) => <li key={`${index}-${item}`}>{item}</li>)}</ol>;
+  return renderParagraphs(answer);
+}
+
+function ExtractedInformation({ information }) {
+  if (!information || typeof information !== "object" || Array.isArray(information)) return null;
+  const entries = Object.entries(information);
+  if (!entries.length) return null;
+  return <article className="info-card panel"><div className="card-label"><span className="answer-symbol">+</span><span>Extracted information</span></div><div className="information-grid">{entries.map(([key, value]) => <div className="information-item" key={key}><span>{displayLabel(key)}</span>{renderValue(value)}</div>)}</div></article>;
+}
+
+function MissingInformation({ items }) {
+  if (!Array.isArray(items) || !items.length) return null;
+  return <article className="missing-card panel"><div className="card-label"><span className="answer-symbol">?</span><span>Information not found in document</span></div><ul>{items.map((item, index) => <li key={`${item}-${index}`}>{item}</li>)}</ul></article>;
+}
+
+function Sources({ sources }) {
+  return <aside className="sources-card panel"><div className="card-label"><span className="answer-symbol">#</span><span>Sources</span></div><p className="source-intro">This answer was informed by these document pages.</p>{Array.isArray(sources) && sources.length ? <div className="source-list">{sources.map((source, index) => <div className="source-item" key={`${source.file_name}-${source.page_number}-${index}`}><span className="page-number">{source.page_number}</span><div><strong>{source.file_name}</strong><span>Page {source.page_number}</span></div></div>)}</div> : <p className="muted-copy">No page references were returned.</p>}</aside>;
 }
 
 function App() {
@@ -90,8 +151,6 @@ function App() {
   };
 
   const document = result?.document;
-  const extractedInformation = document?.extracted_information;
-  const informationEntries = extractedInformation && typeof extractedInformation === "object" ? Object.entries(extractedInformation) : [];
   const mode = getPromptMode(prompt);
 
   return (
@@ -122,7 +181,7 @@ function App() {
 
         {loading && <section className="loading-panel panel"><div className="loading-orb"><span /></div><div><p className="eyebrow">Working on it</p><h2>Reading between the lines...</h2><p>Searching the document for the most relevant context.</p></div></section>}
         {!loading && !result && !error && <section className="empty-state"><div className="empty-line" /><p className="eyebrow">Your answer will appear here</p><h2>Insight, without the search.</h2><p>Ask for an explanation, a summary, a comparison, or a specific detail from your document.</p></section>}
-        {!loading && result && document && <section className="results-area"><div className="results-header"><div><p className="eyebrow">Document insight</p><h2>{mode === "comparison" ? "A closer comparison" : mode === "summary" ? "Document summary" : "Here is what I found"}</h2></div><span className="grounded-badge"><span className="status-dot" /> Grounded response</span></div><div className="results-grid"><div className="answer-column"><article className="answer-card panel"><div className="card-label"><span className="answer-symbol">A</span><span>Answer</span></div><AnswerContent answer={document.answer} mode={mode} /></article>{informationEntries.length > 0 && <article className="info-card panel"><div className="card-label"><span className="answer-symbol">+</span><span>Extracted information</span></div><div className="information-grid">{informationEntries.map(([key, value]) => <div className="information-item" key={key}><span>{displayLabel(key)}</span>{renderValue(value)}</div>)}</div></article>}{document.missing_information?.length > 0 && <article className="missing-card panel"><div className="card-label"><span className="answer-symbol">?</span><span>Not found in document</span></div><ul>{document.missing_information.map((item) => <li key={item}>{item}</li>)}</ul></article>}</div><aside className="sources-card panel"><div className="card-label"><span className="answer-symbol">#</span><span>Sources</span></div><p className="source-intro">This answer was informed by these document pages.</p>{document.sources?.length ? <div className="source-list">{document.sources.map((source, index) => <div className="source-item" key={`${source.file_name}-${source.page_number}-${index}`}><span className="page-number">{source.page_number}</span><div><strong>{source.file_name}</strong><span>Page {source.page_number}</span></div></div>)}</div> : <p className="muted-copy">No page references were returned.</p>}</aside></div></section>}
+        {!loading && result && document && <section className="results-area"><div className="results-header"><div><p className="eyebrow">Document insight</p><h2>{mode === "comparison" ? "A closer comparison" : mode === "summary" ? "Document summary" : "Here is what I found"}</h2></div><span className="grounded-badge"><span className="status-dot" /> Grounded response</span></div><div className="results-grid"><div className="answer-column"><article className="answer-card panel"><div className="card-label"><span className="answer-symbol">A</span><span>Answer</span></div><AnswerContent answer={document.answer} /></article><ExtractedInformation information={document.extracted_information} /><MissingInformation items={document.missing_information} /></div><Sources sources={document.sources} /></div></section>}
       </main>
       <footer className="footer"><span>FDE Document Intelligence</span><span>Answers stay grounded in your source material</span></footer>
     </div>

@@ -78,6 +78,13 @@ textarea:focus { border-color: var(--sage); box-shadow: 0 0 0 3px #e7f0e9; }
 .answer-copy { color: #3e4b46; font-size: 16px; line-height: 1.7; }
 .answer-copy p { margin-bottom: 14px; }
 .answer-copy p:last-child { margin-bottom: 0; }
+.answer-content { display: grid; gap: 16px; }
+.answer-table-wrap { width: 100%; overflow-x: auto; border: 1px solid var(--line); }
+.answer-table { width: 100%; min-width: 460px; border-collapse: collapse; color: #3e4b46; font-size: 13px; line-height: 1.5; }
+.answer-table th, .answer-table td { padding: 13px 15px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: top; }
+.answer-table th { color: var(--sage-dark); background: #f1f6f1; font-size: 11px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; }
+.answer-table tr:last-child td { border-bottom: 0; }
+.answer-table tbody tr:nth-child(even) { background: #fbfcfb; }
 .answer-points { display: grid; gap: 13px; margin: 0; padding: 0; list-style: none; counter-reset: points; color: #3e4b46; font-size: 15px; line-height: 1.6; }
 .answer-points li { display: grid; grid-template-columns: 28px 1fr; gap: 11px; counter-increment: points; }
 .answer-points li::before { content: counter(points, decimal-leading-zero); color: var(--coral); font-size: 11px; font-weight: 700; padding-top: 4px; }
