@@ -115,7 +115,7 @@ class DocumentPipeline:
                 f"""[DOCUMENT: {metadata['file_name']}, PAGE: {metadata['page_number']}]\n{result['text']}\n"""
 
             )
-        context = "\n".join(context_parts)
+        context = "\n\n".join(context)
         # 8. Generate the prompt-driven response
         response = self.extractor.extract(
             user_prompt=user_prompt,
