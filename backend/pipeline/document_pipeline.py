@@ -107,11 +107,15 @@ class DocumentPipeline:
             )
 
         # 7. Build context for the LLM
-        context = "\n\n".join(
-            result["text"]
-            for result in results
-        )
+        context = []
 
+        for result in results:
+            metadata = result["metadata"]
+            context.append(
+                f"""[DOCUMENT: {metadata['file_name']}, PAGE: {metadata['page_number']}]\n{result['text']}\n"""
+
+            )
+        context = "\n".join(context_parts)
         # 8. Generate the prompt-driven response
         response = self.extractor.extract(
             user_prompt=user_prompt,
