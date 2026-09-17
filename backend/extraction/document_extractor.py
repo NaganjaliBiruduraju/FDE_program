@@ -2,6 +2,7 @@ import json
 
 from backend.llm.llm_service import GroqLLM
 from backend.prompts.extraction_prompt import build_extraction_prompt
+from backend.prompts.prompt_analyzer import analyze_prompt
 from backend.schemas.document_schema import DocumentResponse
 
 
@@ -30,9 +31,12 @@ class DocumentExtractor:
         if not context.strip():
             raise ValueError("context cannot be empty")
 
+        prompt_requirements = analyze_prompt(user_prompt)
+
         prompt = build_extraction_prompt(
             user_prompt=user_prompt,
             context=context,
+            prompt_requirements=prompt_requirements,
         )
 
         response = self.llm.generate_json(prompt)
