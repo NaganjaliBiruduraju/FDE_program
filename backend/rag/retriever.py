@@ -26,7 +26,7 @@ class RAGRetriever:
         file_name: str,
         top_k: int = 5,
     ) -> list[dict]:
-        """Retrieve relevant chunks using semantic and lexical evidence."""
+        """Retrieve chunks using semantic and lexical evidence."""
 
         if not isinstance(query, str):
             raise TypeError("query must be a string")
@@ -65,9 +65,15 @@ class RAGRetriever:
         )
 
         # 5. Combine retrieval signals
-        return self._combine_results(
+        combined_results = self._combine_results(
             semantic_results=semantic_results,
             keyword_results=keyword_results,
+            top_k=top_k * 2,
+        )
+
+        # 6. Select relevant and diverse chunks
+        return self._select_diverse_results(
+            results=combined_results,
             top_k=top_k,
         )
 
@@ -399,7 +405,6 @@ class RAGRetriever:
                     ),
                     "fusion_score": 0.0,
                 }
-
             else:
                 combined[chunk_id][
                     "keyword_rank"
@@ -512,6 +517,87 @@ class RAGRetriever:
         )
 
         return ranked_results[:top_k]
+
+    def _select_diverse_results(
+        self,
+        results: list[dict],
+        top_k: int,
+    ) -> list[dict]:
+        """Select relevant chunks while reducing duplicate content."""
+
+        if not results:
+            return []
+
+        selected = []
+
+        relevance_weight = 0.75
+        diversity_weight = 0.25
+
+        remaining = results.copy()
+
+        while remaining and len(selected) < top_k:
+            best_result = None
+            best_score = float("-inf")
+
+            for result in remaining:
+                relevance_score = result.get(
+                    "fusion_score",
+                    0.0,
+                )
+
+                max_similarity = 0.0
+
+                for selected_result in selected:
+                    similarity = self._text_similarity(
+                        result["text"],
+                        selected_result["text"],
+                    )
+
+                    max_similarity = max(
+                        max_similarity,
+                        similarity,
+                    )
+
+                diversity_score = 1.0 - max_similarity
+
+                selection_score = (
+                    relevance_weight * relevance_score
+                    + diversity_weight * diversity_score
+                )
+
+                if selection_score > best_score:
+                    best_score = selection_score
+                    best_result = result
+
+            selected.append(best_result)
+            remaining.remove(best_result)
+
+        return selected
+
+    @staticmethod
+    def _text_similarity(
+        text_a: str,
+        text_b: str,
+    ) -> float:
+        """Calculate token-based similarity between two chunks."""
+
+        tokens_a = set(
+            RAGRetriever._tokenize(text_a)
+        )
+        tokens_b = set(
+            RAGRetriever._tokenize(text_b)
+        )
+
+        if not tokens_a or not tokens_b:
+            return 0.0
+
+        intersection = tokens_a.intersection(
+            tokens_b
+        )
+
+        union = tokens_a.union(tokens_b)
+
+        return len(intersection) / len(union)
 
     @staticmethod
     def _tokenize(text: str) -> list[str]:
