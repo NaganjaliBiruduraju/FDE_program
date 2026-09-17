@@ -52,10 +52,13 @@ textarea:focus { border-color: var(--sage); box-shadow: 0 0 0 3px #e7f0e9; }
 .side-note { margin-top: auto; padding-top: 22px; border-top: 1px solid #ccdccc; color: #758a7c; font-size: 11px; line-height: 1.5; }
 .side-note .status-dot { display: inline-block; margin-right: 8px; vertical-align: 1px; }
 .message { display: flex; gap: 10px; margin: 0 0 16px; padding: 12px; border: 1px solid #ecc9c0; background: #fff8f5; }
+.message > div { min-width: 0; }
 .message-icon { display: grid; flex: 0 0 auto; width: 18px; height: 18px; place-items: center; border-radius: 50%; color: white; background: var(--coral); font-size: 11px; font-weight: 700; }
 .message strong, .message span:last-child { display: block; }
 .message strong { margin-bottom: 2px; color: #874d40; font-size: 12px; }
 .message span:last-child { color: #a16e62; font-size: 12px; }
+.retry-button { margin-top: 8px; padding: 0; border: 0; border-bottom: 1px solid #c78a7c; color: #874d40; background: transparent; font-size: 11px; font-weight: 700; }
+.retry-button:hover { color: var(--coral); }
 .empty-state { max-width: 470px; padding: 86px 0 0 64px; color: var(--muted); }
 .empty-line { width: 48px; height: 1px; margin-bottom: 26px; background: var(--coral); }
 .empty-state h2 { margin-bottom: 10px; font-family: Georgia, "Times New Roman", serif; font-size: 28px; font-weight: 400; }
@@ -78,6 +81,8 @@ textarea:focus { border-color: var(--sage); box-shadow: 0 0 0 3px #e7f0e9; }
 .answer-copy { color: #3e4b46; font-size: 16px; line-height: 1.7; }
 .answer-copy p { margin-bottom: 14px; }
 .answer-copy p:last-child { margin-bottom: 0; }
+.empty-answer { display: grid; gap: 6px; padding: 16px; border-left: 2px solid var(--coral); color: var(--muted); background: #fffaf7; font-size: 13px; line-height: 1.5; }
+.empty-answer strong { color: #874d40; font-size: 14px; }
 .answer-content { display: grid; gap: 16px; }
 .answer-table-wrap { width: 100%; overflow-x: auto; border: 1px solid var(--line); }
 .answer-table { width: 100%; min-width: 460px; border-collapse: collapse; color: #3e4b46; font-size: 13px; line-height: 1.5; }

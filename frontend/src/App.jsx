@@ -2,11 +2,20 @@ import { useRef, useState } from "react";
 import "./App.css";
 
 const API_URL = "http://127.0.0.1:8000/api/extract";
+const MAX_FILE_SIZE = 25 * 1024 * 1024;
 
 function formatFileSize(bytes) {
   if (!bytes) return "PDF document";
   if (bytes < 1024 * 1024) return `${Math.max(1, Math.round(bytes / 1024))} KB`;
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+function getApiErrorMessage(response, data) {
+  const detail = typeof data?.detail === "string" ? data.detail.trim() : "";
+  if (response.status === 400) return detail || "The document or question could not be accepted. Check both and try again.";
+  if (response.status >= 500) return detail && detail.length <= 240 ? `The document service could not finish this request: ${detail}` : "The document service could not finish this request. Please try again in a moment.";
+  if (detail && detail.length <= 240) return detail;
+  return `The document service returned an unexpected error (${response.status}). Please try again.`;
 }
 
 function getPromptMode(prompt) {
@@ -83,7 +92,7 @@ function MarkdownTable({ table }) {
 }
 
 function AnswerContent({ answer }) {
-  if (!answer) return <p className="muted-copy">No answer was returned for this question.</p>;
+  if (typeof answer !== "string" || !answer.trim()) return <div className="empty-answer"><strong>No answer found in the document</strong><span>Try rephrasing your question or asking about another detail.</span></div>;
   const table = parseMarkdownTable(answer);
   if (table) return <div className="answer-content">{renderParagraphs(table.before)}<MarkdownTable table={table} />{renderParagraphs(table.after)}</div>;
   const numberedItems = getNumberedItems(answer);
@@ -123,7 +132,15 @@ function App() {
   const selectFile = (selectedFile) => {
     if (!selectedFile) return;
     if (selectedFile.type !== "application/pdf" && !selectedFile.name.toLowerCase().endsWith(".pdf")) {
+      setFile(null);
+      setResult(null);
       setError("Please choose a PDF document.");
+      return;
+    }
+    if (selectedFile.size > MAX_FILE_SIZE) {
+      setFile(null);
+      setResult(null);
+      setError(`That file is ${formatFileSize(selectedFile.size)}. Please choose a PDF smaller than 25 MB.`);
       return;
     }
     setFile(selectedFile);
@@ -136,6 +153,7 @@ function App() {
 
   const handleUpload = async (event) => {
     event.preventDefault();
+    if (loading) return;
     if (!file) { setError("Add a PDF before asking a question."); return; }
     if (!prompt.trim()) { setError("Add a question or instruction for the document."); return; }
     setLoading(true);
@@ -147,11 +165,16 @@ function App() {
     try {
       const response = await fetch(API_URL, { method: "POST", body: formData });
       const data = await response.json().catch(() => null);
-      if (!response.ok) throw new Error(data?.detail || "Document extraction failed.");
-      if (!data?.document) throw new Error("The document service returned an incomplete response.");
+      if (!response.ok) throw new Error(getApiErrorMessage(response, data));
+      if (!data || !data.document || typeof data.document !== "object") throw new Error("The document service returned an unexpected response. Please try again.");
+      if (typeof data.document.answer !== "string") throw new Error("The document service returned an incomplete answer. Please try again.");
       setResult(data);
     } catch (err) {
-      setError(err.message || "We could not process that document. Please try again.");
+      if (err instanceof TypeError) {
+        setError("We could not reach the document service. Check that the backend is running, then try again.");
+      } else {
+        setError(err.message || "We could not process that document. Please try again.");
+      }
     } finally {
       setLoading(false);
     }
@@ -179,7 +202,7 @@ function App() {
             <div className="section-heading prompt-heading"><div><span className="step-number">02</span><h2>What would you like to know?</h2></div></div>
             <textarea value={prompt} onChange={(event) => { setPrompt(event.target.value); setError(""); }} placeholder="Ask a question or describe what you want to find..." rows="5" />
             <div className="prompt-footer"><span>Answers are generated only from your uploaded document.</span><span>{prompt.length}/2,000</span></div>
-            {error && <div className="message error-message" role="alert"><span className="message-icon">!</span><div><strong>Something needs your attention</strong><span>{error}</span></div></div>}
+            {error && <div className="message error-message" role="alert"><span className="message-icon">!</span><div><strong>Something needs your attention</strong><span>{error}</span>{file && prompt.trim() && <button className="retry-button" type="button" onClick={handleUpload} disabled={loading}>Try again</button>}</div></div>}
             <button className="ask-button" type="submit" disabled={loading || !file || !prompt.trim()}>{loading ? <><span className="loader" /> Reading your document...</> : <>Ask document <span aria-hidden="true">-&gt;</span></>}</button>
           </section>
 
