@@ -3,7 +3,7 @@ from backend.vector_store.chroma_store import ChromaVectorStore
 
 
 class RAGRetriever:
-    """Retrieve relevant document chunks for a query."""
+    """Retrieve relevant chunks from a specific document."""
 
     def __init__(
         self,
@@ -11,6 +11,7 @@ class RAGRetriever:
         collection_name: str = "document_chunks",
     ):
         self.embedder = TextEmbedder()
+
         self.vector_store = ChromaVectorStore(
             persist_directory=persist_directory,
             collection_name=collection_name,
@@ -19,15 +20,22 @@ class RAGRetriever:
     def retrieve(
         self,
         query: str,
+        file_name: str,
         top_k: int = 5,
     ) -> list[dict]:
-        """Retrieve the most relevant chunks for a query."""
+        """Retrieve relevant chunks from the specified document."""
 
         if not isinstance(query, str):
             raise TypeError("query must be a string")
 
         if not query.strip():
             raise ValueError("query cannot be empty")
+
+        if not isinstance(file_name, str):
+            raise TypeError("file_name must be a string")
+
+        if not file_name.strip():
+            raise ValueError("file_name cannot be empty")
 
         if top_k <= 0:
             raise ValueError("top_k must be greater than 0")
@@ -37,6 +45,9 @@ class RAGRetriever:
         results = self.vector_store.collection.query(
             query_embeddings=[query_embedding],
             n_results=top_k,
+            where={
+                "file_name": file_name,
+            },
         )
 
         retrieved_chunks = []

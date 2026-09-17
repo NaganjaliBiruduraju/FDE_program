@@ -7,11 +7,10 @@ from backend.embeddings.embedder import TextEmbedder
 from backend.vector_store.chroma_store import ChromaVectorStore
 from backend.rag.retriever import RAGRetriever
 from backend.extraction.document_extractor import DocumentExtractor
-from backend.evaluation.evaluator import DocumentEvaluator
 
 
 class DocumentPipeline:
-    """Run the complete document processing pipeline."""
+    """Run the complete prompt-driven document processing pipeline."""
 
     def __init__(
         self,
@@ -29,32 +28,46 @@ class DocumentPipeline:
         )
 
         self.extractor = DocumentExtractor()
-        self.evaluator = DocumentEvaluator()
+
+        self.retriever = RAGRetriever(
+            persist_directory=persist_directory,
+            collection_name=collection_name,
+        )
 
     def process(
         self,
         pdf_path: str | Path,
-        query: str,
+        user_prompt: str,
         top_k: int = 5,
     ) -> dict:
-        """Process a PDF and return structured extraction with evaluation."""
+        """Process a PDF according to the user's prompt."""
 
         pdf_path = Path(pdf_path)
 
         if not pdf_path.exists():
-            raise FileNotFoundError(f"PDF not found: {pdf_path}")
+            raise FileNotFoundError(
+                f"PDF not found: {pdf_path}"
+            )
 
         if pdf_path.suffix.lower() != ".pdf":
-            raise ValueError(f"Expected a PDF file: {pdf_path}")
+            raise ValueError(
+                f"Expected a PDF file: {pdf_path}"
+            )
 
-        if not isinstance(query, str):
-            raise TypeError("query must be a string")
+        if not isinstance(user_prompt, str):
+            raise TypeError(
+                "user_prompt must be a string"
+            )
 
-        if not query.strip():
-            raise ValueError("query cannot be empty")
+        if not user_prompt.strip():
+            raise ValueError(
+                "user_prompt cannot be empty"
+            )
 
         if top_k <= 0:
-            raise ValueError("top_k must be greater than 0")
+            raise ValueError(
+                "top_k must be greater than 0"
+            )
 
         # 1. Parse PDF
         document = parse_pdf(pdf_path)
@@ -66,7 +79,9 @@ class DocumentPipeline:
         chunks = chunk_document(document)
 
         if not chunks:
-            raise ValueError("No text chunks were created from the document")
+            raise ValueError(
+                "No text chunks were created from the document"
+            )
 
         # 4. Generate embeddings
         embeddings = self.embedder.embed_texts(
@@ -79,16 +94,17 @@ class DocumentPipeline:
             embeddings=embeddings,
         )
 
-        # 6. Retrieve relevant chunks
-        retriever = RAGRetriever(
-            persist_directory=self.persist_directory,
-            collection_name=self.collection_name,
-        )
-
-        results = retriever.retrieve(
-            query=query,
+        # 6. Retrieve chunks relevant to the user's prompt
+        results = self.retriever.retrieve(
+            query=user_prompt,
+            file_name=document.file_name,
             top_k=top_k,
         )
+
+        if not results:
+            raise ValueError(
+                "No relevant information was found in the document"
+            )
 
         # 7. Build context
         context = "\n\n".join(
@@ -96,19 +112,22 @@ class DocumentPipeline:
             for result in results
         )
 
-        # 8. Extract structured information
-        structured_document = self.extractor.extract(
+        # 8. Generate response according to the user's prompt
+        response = self.extractor.extract(
+            user_prompt=user_prompt,
             context=context,
-            file_name=document.file_name,
         )
 
-        # 9. Evaluate extraction
-        evaluation = self.evaluator.evaluate(
-            structured_document
-        )
+        # 9. Add source references from retrieved chunks
+        response.sources = [
+            {
+                "file_name": result["metadata"]["file_name"],
+                "page_number": result["metadata"]["page_number"],
+            }
+            for result in results
+        ]
 
         return {
-            "document": structured_document,
-            "evaluation": evaluation,
+            "document": response,
             "retrieved_chunks": results,
         }

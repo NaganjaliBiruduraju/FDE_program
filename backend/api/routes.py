@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from fastapi import APIRouter, File, HTTPException, UploadFile
+from fastapi import APIRouter, File, Form, HTTPException, UploadFile
 
 from backend.pipeline.document_pipeline import DocumentPipeline
 
@@ -13,8 +13,9 @@ pipeline = DocumentPipeline()
 @router.post("/extract")
 async def extract_document(
     file: UploadFile = File(...),
+    prompt: str = Form(...),
 ):
-    """Extract structured information from an uploaded PDF."""
+    """Process an uploaded PDF according to the user's prompt."""
 
     if not file.filename:
         raise HTTPException(
@@ -26,6 +27,12 @@ async def extract_document(
         raise HTTPException(
             status_code=400,
             detail="Only PDF files are supported",
+        )
+
+    if not prompt.strip():
+        raise HTTPException(
+            status_code=400,
+            detail="Prompt cannot be empty",
         )
 
     upload_directory = Path("documents/uploads")
@@ -42,18 +49,12 @@ async def extract_document(
 
         result = pipeline.process(
             pdf_path=file_path,
-            query=(
-                "What is the document title, authors, "
-                "research topic, objective, dataset, "
-                "methodology, algorithms, results, "
-                "findings, and conclusions?"
-            ),
+            user_prompt=prompt,
             top_k=15,
         )
 
         return {
             "document": result["document"].model_dump(),
-            "evaluation": result["evaluation"],
         }
 
     except Exception as exc:
