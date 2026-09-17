@@ -40,3 +40,7 @@ data/
 # Local vector database
 documents/vector_db/
 documents/test_vector_db/
+
+# Generated document data
+documents/*_vector_db/
+documents/uploads/
