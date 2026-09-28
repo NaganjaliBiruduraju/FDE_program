@@ -25,6 +25,50 @@ SECTION_NAMES = {
 }
 
 
+CONCEPT_SUFFIXES = {
+    "tracker",
+    "server",
+    "model",
+    "manager",
+    "controller",
+    "engine",
+    "framework",
+    "algorithm",
+    "architecture",
+    "protocol",
+    "database",
+    "network",
+    "service",
+    "storage",
+    "processing",
+    "learning",
+    "method",
+    "system",
+}
+
+
+CONCEPT_INDICATORS = {
+    "tracker",
+    "server",
+    "model",
+    "manager",
+    "controller",
+    "engine",
+    "framework",
+    "algorithm",
+    "architecture",
+    "protocol",
+    "database",
+    "network",
+    "service",
+    "storage",
+    "processing",
+    "learning",
+    "method",
+    "system",
+}
+
+
 def understand_query(user_prompt: str) -> dict:
     """Identify intent, concepts, keywords, and section hints."""
 
@@ -38,9 +82,7 @@ def understand_query(user_prompt: str) -> dict:
     lower_prompt = prompt.lower()
 
     intent = _detect_intent(lower_prompt)
-
     section_hint = _detect_section(lower_prompt)
-
     quoted_terms = _extract_quoted_terms(prompt)
 
     words = re.findall(
@@ -68,20 +110,18 @@ def understand_query(user_prompt: str) -> dict:
         if term not in keywords:
             keywords.append(term)
 
-    # Meaningful multi-word concepts are important.
+    # Multi-word concepts are important.
     for concept in concepts:
         if concept not in keywords:
             keywords.append(concept)
 
-    # Individual words remain useful as secondary signals.
+    # Individual meaningful words remain useful.
     for word in meaningful_words:
         if word not in keywords:
             keywords.append(word)
 
     if concepts:
-        primary_topic = _select_primary_concept(
-            concepts
-        )
+        primary_topic = _select_primary_concept(concepts)
     elif meaningful_words:
         primary_topic = meaningful_words[0]
     else:
@@ -200,35 +240,56 @@ def _extract_quoted_terms(prompt: str) -> list[str]:
 def _detect_concepts(
     meaningful_words: list[str],
     prompt: str,
-    ) -> list[str]:
-    """Detect meaningful two-word concepts."""
+) -> list[str]:
+    """Detect meaningful multi-word concepts."""
 
     concepts = []
-
-    concept_suffixes = {
-        "tracker",
-        "server",
-        "system",
-        "model",
-        "manager",
-        "controller",
-        "engine",
-        "framework",
-        "algorithm",
-        "architecture",
-        "protocol",
-        "database",
-        "network",
-        "service",
-        "storage",
-    }
 
     for index in range(len(meaningful_words) - 1):
         first = meaningful_words[index]
         second = meaningful_words[index + 1]
 
-        if second in concept_suffixes:
+        if second in CONCEPT_SUFFIXES:
             concept = f"{first} {second}"
+
+            # Avoid phrases beginning with generic action words.
+            if first in {
+                "used",
+                "using",
+                "use",
+                "based",
+                "given",
+                "provide",
+                "provides",
+                "make",
+                "makes",
+                "include",
+                "includes",
+            }:
+                continue
+
+            if concept not in concepts:
+                concepts.append(concept)
+
+    # Handle common question patterns explicitly.
+    if re.search(
+        r"\b(?:ai|artificial intelligence)\s+approaches?\b",
+        prompt,
+    ):
+        if "ai approaches" not in concepts:
+            concepts.append("ai approaches")
+
+    if re.search(
+        r"\b(?:machine learning|deep learning)\s+approaches?\b",
+        prompt,
+    ):
+        match = re.search(
+            r"\b(?:machine learning|deep learning)\s+approaches?\b",
+            prompt,
+        )
+
+        if match:
+            concept = match.group(0)
 
             if concept not in concepts:
                 concepts.append(concept)
@@ -236,92 +297,24 @@ def _detect_concepts(
     return concepts
 
 
-def _is_likely_concept(words: list[str]) -> bool:
-    """Check whether a phrase looks like a named concept."""
-
-    concept_indicators = {
-        "tracker",
-        "server",
-        "system",
-        "model",
-        "network",
-        "database",
-        "learning",
-        "machine",
-        "cloud",
-        "data",
-        "management",
-        "processing",
-        "architecture",
-        "algorithm",
-        "framework",
-        "method",
-        "function",
-        "protocol",
-        "storage",
-        "engine",
-        "service",
-        "controller",
-        "manager",
-    }
-
-    return any(
-        word in concept_indicators
-        for word in words
-    )
 def _select_primary_concept(
     concepts: list[str],
 ) -> str:
-    """Select the strongest multi-word concept."""
-
-    concept_indicators = {
-        "tracker",
-        "server",
-        "system",
-        "model",
-        "architecture",
-        "algorithm",
-        "framework",
-        "database",
-        "network",
-        "protocol",
-        "manager",
-        "controller",
-        "service",
-        "engine",
-        "storage",
-        "processing",
-        "management",
-        "learning",
-        "method",
-        "function",
-    }
-
-    def score(concept: str) -> int:
-        return sum(
-            1
-            for word in concept.split()
-            if word in concept_indicators
-        )
-
-    return max(
-        concepts,
-        key=score,
-    )
+    """Select the strongest meaningful concept."""
 
     def score(concept: str) -> tuple[int, int]:
         words = concept.split()
 
-        indicator_score = max(
-            (
-                concept_priority.get(word, 0)
-                for word in words
-            ),
-            default=0,
+        indicator_score = sum(
+            1
+            for word in words
+            if word in CONCEPT_INDICATORS
         )
 
-        # Prefer shorter concepts when the indicator
-        # strength is the same.
+        # Explicit AI approach concepts should be highly relevant.
+        if concept == "ai approaches":
+            indicator_score += 3
+
         return (
             indicator_score,
             -len(words),

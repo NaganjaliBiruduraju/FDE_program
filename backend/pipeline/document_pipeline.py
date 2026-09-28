@@ -88,13 +88,16 @@ class DocumentPipeline:
             [chunk.text for chunk in chunks]
         )
 
-        # 5. Store chunks and embeddings
+        # 5. Clear previous document data
+        self.vector_store.clear()
+
+        # 6. Store the new document's chunks and embeddings
         self.vector_store.add_chunks(
             chunks=chunks,
             embeddings=embeddings,
         )
 
-        # 6. Retrieve relevant chunks using RAG
+        # 7. Retrieve relevant chunks using RAG
         results = self.retriever.retrieve(
             query=user_prompt,
             file_name=document.file_name,
@@ -106,23 +109,27 @@ class DocumentPipeline:
                 "No relevant information was found in the document"
             )
 
-        # 7. Build context for the LLM
+        # 8. Build context for the LLM
         context = []
 
         for result in results:
             metadata = result["metadata"]
-            context.append(
-                f"""[DOCUMENT: {metadata['file_name']}, PAGE: {metadata['page_number']}]\n{result['text']}\n"""
 
+            context.append(
+                f"""[DOCUMENT: {metadata['file_name']}, PAGE: {metadata['page_number']}]
+{result['text']}
+"""
             )
+
         context = "\n\n".join(context)
-        # 8. Generate the prompt-driven response
+
+        # 9. Generate the prompt-driven response
         response = self.extractor.extract(
             user_prompt=user_prompt,
             context=context,
         )
 
-        # 9. Create unique source references
+        # 10. Create unique source references
         unique_sources = []
         seen_sources = set()
 

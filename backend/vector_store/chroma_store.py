@@ -24,6 +24,16 @@ class ChromaVectorStore:
 
         return self.collection.count()
 
+    def clear(self) -> None:
+        """Delete all stored chunks from the collection."""
+
+        existing = self.collection.get()
+
+        if existing["ids"]:
+            self.collection.delete(
+                ids=existing["ids"]
+            )
+
     def add_chunks(
         self,
         chunks: list[TextChunk],
